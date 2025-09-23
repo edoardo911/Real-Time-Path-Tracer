@@ -11,6 +11,7 @@ namespace RT
 		ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&denoiserCmdListAlloc)));
 
 		passCB = std::make_unique<UploadBuffer<PassConstants>>(device, passNum, true);
+		skyCB = std::make_unique<UploadBuffer<ObjectCB>>(device, 1, false);
 		for(UINT16 count:instances)
 		{
 			if(count > 0)

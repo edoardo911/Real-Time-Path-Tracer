@@ -5,8 +5,13 @@ struct MaterialPBR
     float roughness;
     float3 R0;
     float specular;
-    bool divideByPdf;
 };
+
+float3 burley(float3 lightStrength, float ndotl, float ndotv, float ldoth, float roughness)
+{
+    float FD90 = 0.5 + 2.0 * ldoth * ldoth * roughness;
+    return lightStrength * (1.0 + (FD90 - 1) * pow(1 - ndotl, 5.0)) * (1 + (FD90 - 1) * pow(1 - ndotv, 5.0)) * ndotl;
+}
 
 float Dggx(float3 normal, float3 halfVec, float roughness)
 {
@@ -112,16 +117,12 @@ float3 ComputeDirectionalLight(Light L, MaterialPBR mat, float3 vndfNormal, floa
     float3 lightVec = -L.Direction;
     
     float ndotl = max(dot(lightVec, cosWNormal), 0.0);
+    float ndotv = max(dot(normal, toEye), 0.0);
     float3 lightStrength = L.Strength;
     
     if(mat.specular > 0.0)
-    {
-        if(mat.divideByPdf)
-            Ls = lightStrength * GGX_PDF(mat, vndfNormal, normal, toEye);
-        else
-            Ls = lightStrength * GGX(mat, lightVec, vndfNormal, toEye);
-    }
-    return lightStrength * ndotl;
+        Ls = lightStrength * GGX_PDF(mat, vndfNormal, normal, toEye);
+    return burley(lightStrength, ndotl, ndotv, dot(lightVec, normalize(toEye + lightVec)), mat.roughness);
 }
 
 float3 ComputePointLight(Light L, MaterialPBR mat, float3 pos, float3 vndfNormal, float3 cosWNormal, float3 normal, float3 toEye, out float3 Ls)
@@ -135,19 +136,15 @@ float3 ComputePointLight(Light L, MaterialPBR mat, float3 pos, float3 vndfNormal
     lightVec /= d;
     
     float ndotl = max(dot(lightVec, cosWNormal), 0.0);
+    float ndotv = max(dot(normal, toEye), 0.0);
     float3 lightStrength = L.Strength;
     
     float att = CalcAttenuation(d, L.FalloffStart, L.FalloffEnd);
     lightStrength *= att;
     
     if(mat.specular > 0.0)
-    {
-        if(mat.divideByPdf)
-            Ls = lightStrength * GGX_PDF(mat, vndfNormal, normal, toEye);
-        else
-            Ls = lightStrength * GGX(mat, lightVec, vndfNormal, toEye);
-    }
-    return lightStrength * ndotl;
+        Ls = lightStrength * GGX_PDF(mat, vndfNormal, normal, toEye);
+    return burley(lightStrength, ndotl, ndotv, dot(lightVec, normalize(toEye + lightVec)), mat.roughness);
 }
 
 float3 ComputeSpotLight(Light L, MaterialPBR mat, float3 pos, float3 vndfNormal, float3 cosWNormal, float3 normal, float3 toEye, out float3 Ls)
@@ -161,6 +158,7 @@ float3 ComputeSpotLight(Light L, MaterialPBR mat, float3 pos, float3 vndfNormal,
     lightVec /= d;
     
     float ndotl = max(dot(lightVec, cosWNormal), 0.0);
+    float ndotv = max(dot(normal, toEye), 0.0);
     float3 lightStrength = L.Strength;
     
     float att = CalcAttenuation(d, L.FalloffStart, L.FalloffEnd);
@@ -170,13 +168,8 @@ float3 ComputeSpotLight(Light L, MaterialPBR mat, float3 pos, float3 vndfNormal,
     lightStrength *= spotFactor;
     
     if(mat.specular > 0.0)
-    {
-        if(mat.divideByPdf)
-            Ls = lightStrength * GGX_PDF(mat, vndfNormal, normal, toEye);
-        else
-            Ls = lightStrength * GGX(mat, lightVec, vndfNormal, toEye);
-    }
-    return lightStrength * ndotl;
+        Ls = lightStrength * GGX_PDF(mat, vndfNormal, normal, toEye);
+    return burley(lightStrength, ndotl, ndotv, dot(lightVec, normalize(toEye + lightVec)), mat.roughness);
 }
 
 float3 ComputeLighting(Light light, MaterialPBR mat, float3 pos, float3 vndfNormal, float3 cosWNormal, float3 normal, float3 toEye, out float3 specAlbedo)

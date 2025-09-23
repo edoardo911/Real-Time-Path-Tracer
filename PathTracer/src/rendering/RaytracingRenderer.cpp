@@ -55,6 +55,8 @@ namespace RT
 		loadShadersAndInputLayout();
 		buildMVRootSignature();
 		buildMVPSOs();
+		buildSkyGeom();
+		buildSkyEntity();
 
 		ThrowIfFailed(mCommandList->Close());
 		ID3D12CommandList* cmdsList[] = { mCommandList.Get() };
@@ -146,6 +148,15 @@ namespace RT
 			drawMVPsoDesc.DSVFormat = mDepthStencilFormat;
 			drawMVPsoDesc.RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON;
 			ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&drawMVPsoDesc, IID_PPV_ARGS(&mMVPSOs["mv"])));
+		}
+
+		Logger::INFO.log("Building sky motion vectors pipeline state...");
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC skyMVPsoDesc = drawMVPsoDesc;
+		{
+			skyMVPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+			skyMVPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+			skyMVPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+			ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&skyMVPsoDesc, IID_PPV_ARGS(&mMVPSOs["mv_sky"])));
 		}
 
 		Logger::INFO.log("Buliding alpha tested motion vectors pipeline state...");
@@ -1174,6 +1185,8 @@ namespace RT
 		drawEntities(RenderLayer::Opaque, mMVCommandList.Get());
 		drawEntities(RenderLayer::Transparent, mMVCommandList.Get());
 		drawEntities(RenderLayer::Water, mMVCommandList.Get());
+		mMVCommandList->SetPipelineState(mMVPSOs["mv_sky"].Get());
+		drawSkybox(mMVCommandList.Get());
 		mMVCommandList->SetPipelineState(mMVPSOs["mv_alpha_tested"].Get());
 		drawEntities(RenderLayer::AlphaTested, mMVCommandList.Get());
 
@@ -1441,6 +1454,16 @@ namespace RT
 			}
 
 			ri->setInstanceCount(count);
+		}
+
+		if(mSky->isDirty())
+		{
+			ObjectCB objCB;
+			XMStoreFloat4x4(&objCB.world, XMMatrixTranspose(XMLoadFloat4x4(&mSky->getInstances()[0].world)));
+			XMStoreFloat4x4(&objCB.prevWorld, XMMatrixTranspose(XMLoadFloat4x4(&mSky->getInstances()[0].world)));
+			mCurrFrameResource->skyCB->copyData(0, objCB);
+
+			mSky->cleanOne();
 		}
 
 		if(oneCulled)

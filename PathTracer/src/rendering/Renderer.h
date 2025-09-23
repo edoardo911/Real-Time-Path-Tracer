@@ -91,11 +91,15 @@ namespace RT
 		void buildEffects();
 		virtual void allocatePostProcessingResources();
 		void buildDefaultFrameResources();
+		void buildSkyGeom();
+		void buildSkyEntity();
 
 		void loadBlueNoiseTexture();
 		void loadLUT();
 
 		virtual void loadShadersAndInputLayout();
+
+		void drawSkybox(ID3D12GraphicsCommandList* cmdList);
 
 		//DLSS
 		NVSDK_NGX_PerfQuality_Value queryDLSSModeResolution();
@@ -197,6 +201,10 @@ namespace RT
 		int phase = 0;
 
 		std::vector<std::unique_ptr<PostProcessing>> mEffects;
+
+		//sky
+		std::unique_ptr<Entity> mSky;
+		std::unique_ptr<MeshGeometry> mSkyGeom;
 
 		//ray tracing resources
 		Microsoft::WRL::ComPtr<ID3D12Resource> mCandidates;

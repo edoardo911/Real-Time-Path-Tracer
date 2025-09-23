@@ -7,6 +7,7 @@
 #include "postprocessing/Vignette.h"
 
 #include "../utils/TextureLoader.h"
+#include "../utils/GeometryGenerator.h"
 
 using namespace DirectX;
 
@@ -261,6 +262,69 @@ namespace RT
 		toggleEffect(EFFECT_VIGNETTE, settings->vignette);
 
 		allocatePostProcessingResources();
+	}
+
+	void Renderer::buildSkyGeom()
+	{
+		Logger::INFO.log("Building sky geometry...");
+		GeometryGenerator geoGen;
+		GeometryGenerator::MeshData sky = geoGen.createBox(0.5F, 0.5F, 0.5F, 1);
+		mSkyGeom = std::make_unique<MeshGeometry>();
+		std::vector<Vertex> vertices(sky.vertices.size());
+		for(size_t i = 0; i < sky.vertices.size(); ++i)
+		{
+			vertices[i].position = sky.vertices[i].position;
+			vertices[i].uvs = sky.vertices[i].texC;
+		}
+
+		UINT vbByteSize = (UINT) vertices.size() * sizeof(Vertex);
+
+		std::vector<UINT16> indices = sky.getIndices16();
+		UINT ibByteSize = (UINT) indices.size() * sizeof(UINT16);
+
+		ThrowIfFailed(D3DCreateBlob(vbByteSize, &mSkyGeom->VertexBufferCPU));
+		CopyMemory(mSkyGeom->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+
+		ThrowIfFailed(D3DCreateBlob(ibByteSize, &mSkyGeom->IndexBufferCPU));
+		CopyMemory(mSkyGeom->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+		mSkyGeom->VertexBufferGPU = CreateDefaultBuffer(md3dDevice.Get(), mCommandList.Get(), vertices.data(), vbByteSize, mSkyGeom->VertexBufferUploader);
+		mSkyGeom->IndexBufferGPU = CreateDefaultBuffer(md3dDevice.Get(), mCommandList.Get(), indices.data(), ibByteSize, mSkyGeom->IndexBufferUploader);
+
+		mSkyGeom->VertexByteStride = sizeof(Vertex);
+		mSkyGeom->VertexBufferByteSize = vbByteSize;
+		mSkyGeom->IndexFormat = DXGI_FORMAT_R16_UINT;
+		mSkyGeom->IndexBufferByteSize = ibByteSize;
+
+		SubmeshGeometry submesh;
+		submesh.IndexCount = (UINT) indices.size();
+		submesh.StartIndexLocation = 0;
+		submesh.BaseVertexLocation = 0;
+
+		mSkyGeom->DrawArgs["sky"] = submesh;
+	}
+
+	void Renderer::buildSkyEntity()
+	{
+		Logger::INFO.log("Building skybox...");
+		mSky = std::make_unique<Entity>();
+		mSky->addNewDefaultInstance();
+		mSky->scale(0, 999.0F);
+		mSky->setGeo(mSkyGeom.get(), "sky");
+	}
+
+	void Renderer::drawSkybox(ID3D12GraphicsCommandList* cmdList)
+	{
+		auto vb = mSky->getGeo()->VertexBufferView();
+		auto ib = mSky->getGeo()->IndexBufferView();
+
+		cmdList->IASetVertexBuffers(0, 1, &vb);
+		cmdList->IASetIndexBuffer(&ib);
+		cmdList->IASetPrimitiveTopology(mSky->getPrimitiveTopology());
+
+		cmdList->SetGraphicsRootShaderResourceView(3, mSky->getGeo()->VertexBufferGPU->GetGPUVirtualAddress());
+		cmdList->SetGraphicsRootShaderResourceView(2, mCurrFrameResource->skyCB->resource()->GetGPUVirtualAddress());
+		cmdList->DrawIndexedInstanced(mSky->getIndexCount(), 1, mSky->getStartIndex(), mSky->getBaseVertex(), 0);
 	}
 
 	void Renderer::allocatePostProcessingResources()

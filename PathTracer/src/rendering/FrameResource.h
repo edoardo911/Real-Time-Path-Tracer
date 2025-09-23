@@ -18,6 +18,7 @@ namespace RT
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> denoiserCmdListAlloc;
 
 		std::unique_ptr<UploadBuffer<PassConstants>> passCB = nullptr;
+		std::unique_ptr<UploadBuffer<ObjectCB>> skyCB = nullptr;
 		std::vector<std::unique_ptr<UploadBuffer<ObjectCB>>> instanceBuffer;
 		std::unique_ptr<UploadBuffer<MaterialConstants>> materialCB = nullptr;
 		std::unique_ptr<UploadBuffer<ObjectCB>> instanceBufferRT = nullptr;

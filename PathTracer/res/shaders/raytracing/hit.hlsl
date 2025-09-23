@@ -361,7 +361,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
         vndfNormal = VNDF(-normRayDir, norm, roughness, gBlueNoise, pos);
     }
         
-    MaterialPBR matPBR = { roughness, material.fresnelR0, material.specular, true };
+    MaterialPBR matPBR = { roughness, material.fresnelR0, material.specular };
     if(totDistance > SPECULAR_CLIP)
         matPBR.specular = 0.0;
     float3 directLight = 0.0;

@@ -13,6 +13,8 @@ This path tracer includes:
 - PBR rendering
 - Ray reconstruction (blurry)
 - ReSTIR
+- Burley BRDF (Diffuse) + GGX BRDF (Specular)
+- Tone mapping (Reinhard, Uncharted2, ACES, AGX)
 
 # DLSS
 **DLSS** has been implemented following NVIDIA's guidelines

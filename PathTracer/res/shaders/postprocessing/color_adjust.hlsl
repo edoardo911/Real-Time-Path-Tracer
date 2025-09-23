@@ -45,6 +45,18 @@ float3 aces_tonemapping(float3 color)
     return saturate((colorAmplified * (a * colorAmplified + b)) / (colorAmplified * (c * colorAmplified + d) + e));
 }
 
+float3 agx_tonemaping(float3 color)
+{
+    float3 x = color * 1.6;
+    float3 x2 = x * x;
+    float3 x3 = x2 * x;
+    
+    float3 num = x3 * 0.305306011 + x2 * 0.682171111 + x * 0.012522878;
+    float3 den = x3 * 0.305306011 + x2 * 0.695210411 + x * 0.042852222 + 1.0;
+    
+    return num / den;
+}
+
 [numthreads(32, 32, 1)]
 void main(uint3 threadID: SV_DispatchThreadID)
 {    
@@ -71,6 +83,9 @@ void main(uint3 threadID: SV_DispatchThreadID)
         break;
     case 3:
         tonemapped = aces_tonemapping(saturatedColor);
+        break;
+    case 4:
+        tonemapped = agx_tonemaping(saturatedColor);
         break;
     }
     
