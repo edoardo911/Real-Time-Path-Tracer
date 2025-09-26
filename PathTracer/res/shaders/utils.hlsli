@@ -140,9 +140,9 @@ float3 calcIndirectLight(Reservoir reservoir, float4 diffuseAlbedo, float3 norm,
         ior = refractionIndex.x;
     else
     {
-        dispersionFactor = (1.0 - max(dot(-normalize(WorldRayDirection()), norm), 0.0)) * 1.3;
+        dispersionFactor = (1.0 - max(dot(-normalize(WorldRayDirection()), norm), 0.0)) * 1.2;
         nonDispersionFactor = 0.1;
-        weights.x *= 0.8;
+        weights.x *= 0.5;
         float w = refractionIndex.x + refractionIndex.y + refractionIndex.z;
         float wr = refractionIndex.x / w;
         float wg = refractionIndex.y / w;
