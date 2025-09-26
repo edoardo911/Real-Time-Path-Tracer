@@ -84,7 +84,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE prevInstance, 
 		//app.settings.dlss = DLSS_QUALITY;
 		//app.settings.rayReconstruction = true;
 
-		if(!app.initialize("box")) //scene name
+		if(!app.initialize("bedroom")) //scene name
 		{
 			exitDefault();
 			return EXIT_FAILURE;

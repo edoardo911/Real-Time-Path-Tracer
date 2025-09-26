@@ -1,0 +1,8 @@
+albedo=(1, 1, 1, 0.141176)
+fresnelR0=(0.126582, 0.126582, 0.126582)
+roughness=0.01
+metallic=0.1
+refraction_index_r=0.36
+refraction_index_g=0.57
+refraction_index_b=0.64
+specular=0.5

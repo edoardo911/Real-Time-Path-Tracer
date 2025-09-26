@@ -480,10 +480,10 @@ namespace RT
 	//ray tracing init sub-routines
 	RaytracingRenderer::AccelerationStructureBuffers RaytracingRenderer::createBottomLevelAS(std::string name, const std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, UINT32>>& vVertexBuffers,
 																							 const std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, UINT32>>& vIndexBuffers,
-																							 bool alphaTested, bool allowUpdate, bool tessellated)
+																							 bool cullBackFaces, bool allowUpdate, bool tessellated)
 	{
 		for(size_t i = 0; i < vVertexBuffers.size(); ++i)
-			mBottomLevelAS[name].AddVertexBuffer(vVertexBuffers[i].first.Get(), 0, vVertexBuffers[i].second, sizeof(Vertex), vIndexBuffers[i].first.Get(), 0, vIndexBuffers[i].second, nullptr, 0, !alphaTested);
+			mBottomLevelAS[name].AddVertexBuffer(vVertexBuffers[i].first.Get(), 0, vVertexBuffers[i].second, sizeof(Vertex), vIndexBuffers[i].first.Get(), 0, vIndexBuffers[i].second, nullptr, 0, cullBackFaces);
 
 		UINT64 scratchSizeInBytes, resultSizeInBytes;
 		mBottomLevelAS[name].ComputeASBufferSizes(md3dDevice.Get(), allowUpdate, &scratchSizeInBytes, &resultSizeInBytes);
@@ -519,13 +519,13 @@ namespace RT
 		Logger::INFO.log("Creating acceleration structures...");
 
 		for(auto& data:mScene->getResidentGeometries())
-			mBlbs[data->name] = createBottomLevelAS(data->name, { { data->VertexBufferGPU, data->vertexCount } }, { { data->IndexBufferGPU, data->DrawArgs["0"].IndexCount } }, false, data->isWater, false);
+			mBlbs[data->name] = createBottomLevelAS(data->name, { { data->VertexBufferGPU, data->vertexCount } }, { { data->IndexBufferGPU, data->DrawArgs["0"].IndexCount } }, data->cullBackFaces, data->isWater, false);
 
 		for(auto& i:mScene->getAllEntities())
 		{
 			for(auto& inst:i->getInstances())
 			{
-				bool shadowIgnore = inst.emissiveIndex >= 0 || i->getType() == INSTANCE_TYPE_WATER;
+				bool shadowIgnore = inst.emissiveIndex >= 0 || i->getType() == INSTANCE_TYPE_WATER || !mScene->getMaterials()[inst.materialIndex]->castsShadows;
 				mInstances.push_back({ mBlbs[i->getGeo()->name].pResult, XMLoadFloat4x4(&inst.world), i->getLayer() == RenderLayer::Opaque, shadowIgnore });
 			}
 		}
@@ -1219,7 +1219,7 @@ namespace RT
 			{
 				if(!i->isCulled(currentInstance++))
 				{
-					bool shadowIgnore = inst.emissiveIndex >= 0 || i->getType() == INSTANCE_TYPE_WATER;
+					bool shadowIgnore = inst.emissiveIndex >= 0 || i->getType() == INSTANCE_TYPE_WATER || !mScene->getMaterials()[inst.materialIndex]->castsShadows;
 					UINT mask = 0xFF;
 					if(shadowIgnore)
 						mask = 0x01;
@@ -1520,7 +1520,7 @@ namespace RT
 		nrdSettings.enableValidation = false;
 		nrdSettings.isMotionVectorInWorldSpace = false;
 		nrdSettings.isHistoryConfidenceAvailable = true;
-		nrdSettings.splitScreen = NRD_SPLIT_SCREEN;
+		nrdSettings.splitScreen = settings->denoising ? NRD_SPLIT_SCREEN : 1.0F;
 		nrdSettings.motionVectorScale[0] = -0.5F;
 		nrdSettings.motionVectorScale[1] = 0.5F;
 		nrdSettings.motionVectorScale[2] = 1.0F;

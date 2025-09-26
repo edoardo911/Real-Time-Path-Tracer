@@ -35,7 +35,7 @@ namespace RT
 		DirectX::XMFLOAT4X4 MatTransform = Identity4x4();
 		DirectX::XMFLOAT3 emission = { 0.0F, 0.0F, 0.0F };
 		float metallic = 0.0F;
-		float refractionIndex = 1.0F;
+        DirectX::XMFLOAT3 refractionIndex = { 1.0F, 1.0F, 1.0F };
 		float specular = 0.3F;
 		bool castsShadows = true;
 	};
@@ -71,6 +71,7 @@ namespace RT
 
         bool isWater = false;
         bool needsRefit = false;
+        bool cullBackFaces = true;
 
         std::unordered_map<std::string, SubmeshGeometry> DrawArgs;
 
@@ -219,7 +220,16 @@ namespace RT
                 mat.emission.z = std::stof(num);
             }
             else if(param == "refraction_index")
-                mat.refractionIndex = std::stof(value);
+            {
+                float val = std::stof(value);
+                mat.refractionIndex = { val, val, val };
+            }
+            else if(param == "refraction_index_r")
+                mat.refractionIndex.x = std::stof(value);
+            else if(param == "refraction_index_g")
+                mat.refractionIndex.y = std::stof(value);
+            else if(param == "refraction_index_b")
+                mat.refractionIndex.z = std::stof(value);
             else if(param == "specular")
                 mat.specular = std::stof(value);
             else if(param == "casts_shadows")
@@ -239,8 +249,17 @@ namespace RT
         file << "roughness=" << mat->Roughness << "\n";
         if(mat->metallic > 0.0F)
             file << "metallic=" << mat->metallic << "\n";
-        if(mat->refractionIndex < 1.0F)
-            file << "refraction_index=" << mat->refractionIndex << "\n";
+        if(mat->refractionIndex.x == mat->refractionIndex.y && mat->refractionIndex.x == mat->refractionIndex.z && mat->refractionIndex.x < 1.0F)
+            file << "refraction_index=" << mat->refractionIndex.x << "\n";
+        else
+        {
+            if(mat->refractionIndex.x < 1.0F)
+                file << "refraction_index_r=" << mat->refractionIndex.x << "\n";
+            if(mat->refractionIndex.y < 1.0F)
+                file << "refraction_index_g=" << mat->refractionIndex.y << "\n";
+            if(mat->refractionIndex.z < 1.0F)
+                file << "refraction_index_b=" << mat->refractionIndex.z << "\n";
+        }
         file << "specular=" << mat->specular << "\n";
         if(!mat->castsShadows)
             file << "casts_shadows=false\n";

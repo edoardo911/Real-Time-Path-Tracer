@@ -1,0 +1,187 @@
+id=0
+cubemap=grasscube1024
+nmaps={rough}
+materials={default,red_wall,green_wall,light_white,gold,metal,diamond}
+geometries={diamond,#box,#quad}
+lights=1
+events=0
+cameras=1
+
+#cameras
+
+{
+	pos=(0,0,-3)
+	look=(0,0,1)
+}
+
+#lights
+
+{
+	direction=(0,-1,0)
+	pos=(0,1.9,0)
+	strength=(1,1,1)
+	falloff_start=0
+	falloff_end=4.87
+	spot_power=1.38
+	type=spot_light
+	radius=0.111
+}
+
+#instances
+
+{
+	id=0
+	geometry=2
+	layer=opaque
+	instances=5
+
+	{
+		material=0
+		texture=-1
+		nmap=-1
+		rmap=-1
+		hmap=-1
+		aomap=-1
+		emap=-1
+		mmap=-1
+		pos=(0,1,-1)
+		rot=(1.5708,0,0)
+		scale=(0.5,1,1)
+		tex_scale=(1,1,1)
+	}
+
+	{
+		material=0
+		texture=-1
+		nmap=-1
+		rmap=-1
+		hmap=-1
+		aomap=-1
+		emap=-1
+		mmap=-1
+		pos=(0,-0.5,-0.5)
+		rot=(0,0,0)
+		scale=(0.5,1,1)
+		tex_scale=(1,1,1)
+	}
+
+	{
+		material=2
+		texture=-1
+		nmap=-1
+		rmap=-1
+		hmap=-1
+		aomap=-1
+		emap=-1
+		mmap=-1
+		pos=(-0.25,-0.5,0)
+		rot=(0,1.5708,0)
+		scale=(0.43,1,1)
+		tex_scale=(1,1,1)
+	}
+
+	{
+		material=1
+		texture=-1
+		nmap=-1
+		rmap=-1
+		hmap=-1
+		aomap=-1
+		emap=-1
+		mmap=-1
+		pos=(0.25,-0.5,0)
+		rot=(0,-1.5708,0)
+		scale=(0.43,1,1)
+		tex_scale=(1,1,1)
+	}
+
+	{
+		material=0
+		texture=-1
+		nmap=-1
+		rmap=-1
+		hmap=-1
+		aomap=-1
+		emap=-1
+		mmap=-1
+		pos=(0,0,1)
+		rot=(-1.5708,0,0)
+		scale=(0.5,1,1)
+		tex_scale=(1,1,1)
+	}
+
+}
+{
+	id=1
+	geometry=1
+	layer=opaque
+	instances=3
+
+	{
+		material=4
+		texture=-1
+		nmap=0
+		rmap=-1
+		hmap=-1
+		aomap=-1
+		emap=-1
+		mmap=-1
+		pos=(1,-0.65,-0.5)
+		rot=(0,0,0)
+		scale=(1.5,1.5,1.5)
+		tex_scale=(0.55,0.55,0.55)
+	}
+
+	{
+		material=5
+		texture=-1
+		nmap=-1
+		rmap=-1
+		hmap=-1
+		aomap=-1
+		emap=-1
+		mmap=-1
+		pos=(-0.7,-0.13,0.5)
+		rot=(0,0,0)
+		scale=(1.5,3.5,1.5)
+		tex_scale=(1,1,1)
+	}
+
+	{
+		material=3
+		texture=-1
+		nmap=-1
+		rmap=-1
+		hmap=-1
+		aomap=-1
+		emap=-1
+		mmap=-1
+		pos=(0,2,0)
+		rot=(0,0,0)
+		scale=(1,0.1,1)
+		tex_scale=(1,1,1)
+	}
+
+}
+{
+	id=2
+	geometry=0
+	layer=transparent
+	instances=1
+
+	{
+		material=6
+		texture=-1
+		nmap=-1
+		rmap=-1
+		hmap=-1
+		aomap=-1
+		emap=-1
+		mmap=-1
+		pos=(-1,-0.95,-0.8)
+		rot=(0,0,-0.855211)
+		scale=(0.2,0.2,0.2)
+		tex_scale=(1,1,1)
+	}
+
+}

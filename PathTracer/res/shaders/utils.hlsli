@@ -125,20 +125,53 @@ float computeTextureLOD(float2 size, float3 d, float t)
     return log2(ceil(p));
 }
 
-float3 calcIndirectLight(Reservoir reservoir, float4 diffuseAlbedo, float3 norm, float3 worldOrigin, float roughness, float metallic, float refractionIndex)
+float3 calcIndirectLight(Reservoir reservoir, float4 diffuseAlbedo, float3 norm, float3 worldOrigin, float roughness, float metallic, float3 refractionIndex, float random)
 {
     Light light = gLights[reservoir.sampleIndex];
 
     float3 color = 0;
-    float3 refrNorm = refract(normalize(WorldRayDirection()), norm, refractionIndex);
-    float3 weights = float3(30.0, 0.9, 1.2); //artistic weights for refraction, reflection and opaque materials
+    float3 weights = float3(7.0, 0.9, 0.6); //artistic weights for refraction, reflection and opaque materials
+
+    float ior = 1.0;
+    float3 mask = float3(1.0, 1.0, 1.0);
+    float dispersionFactor = 1.0;
+    float nonDispersionFactor = 1.0;
+    if(refractionIndex.x == refractionIndex.y && refractionIndex.y == refractionIndex.z)
+        ior = refractionIndex.x;
+    else
+    {
+        dispersionFactor = (1.0 - max(dot(-normalize(WorldRayDirection()), norm), 0.0)) * 1.3;
+        nonDispersionFactor = 0.1;
+        weights.x *= 0.8;
+        float w = refractionIndex.x + refractionIndex.y + refractionIndex.z;
+        float wr = refractionIndex.x / w;
+        float wg = refractionIndex.y / w;
+        float wb = 1.0 - wr - wg;
+        
+        if(random < wr)
+        {
+            ior = refractionIndex.x;
+            mask = float3(3.0 / wr, 0.0, 0.0);
+        }
+        else if(random < wr + wg)
+        {
+            ior = refractionIndex.y;
+            mask = float3(0.0, 3.0 / wg, 0.0);
+        }
+        else
+        {
+            ior = refractionIndex.z;
+            mask = float3(0.0, 0.0, 3.0 / wb);
+        }
+    }
+    float3 refrNorm = refract(normalize(WorldRayDirection()), norm, ior);
 
     if(light.type == LIGHT_TYPE_DIRECTIONAL)
     {
         float3 lightDir = -light.Direction;
 
         float3 radiance = light.Strength * diffuseAlbedo.rgb * reservoir.W;
-        float3 cRefr = radiance * pow(max(dot(refrNorm, lightDir), 0.0), 5.5) * (1.0 - diffuseAlbedo.a);
+        float3 cRefr = radiance * pow(max(dot(refrNorm, lightDir), 0.0), 3.5) * (1.0 - diffuseAlbedo.a) * (nonDispersionFactor + mask * dispersionFactor);
         float3 cRefl = radiance * max(dot(norm, normalize(lightDir - WorldRayDirection())), 0.0) * max(metallic * 3.0 - roughness * 1.1, 0.0);
         float3 cNorm = radiance * max(dot(norm, lightDir), 0.0) * (1.0 - roughness);
         color = cRefr * weights.x + cRefl * weights.y + cNorm * weights.z;
@@ -151,7 +184,7 @@ float3 calcIndirectLight(Reservoir reservoir, float4 diffuseAlbedo, float3 norm,
         float lightPower = CalcAttenuation(dist, light.FalloffStart, light.FalloffEnd);
 
         float3 radiance = light.Strength * diffuseAlbedo.rgb * lightPower * reservoir.W;
-        float3 cRefr = radiance * pow(max(dot(refrNorm, lightDir), 0.0), 5.5) * (1.0 - diffuseAlbedo.a);
+        float3 cRefr = radiance * pow(max(dot(refrNorm, lightDir), 0.0), 3.5) * (1.0 - diffuseAlbedo.a) * (nonDispersionFactor + mask * dispersionFactor);
         float3 cRefl = radiance * max(dot(norm, normalize(lightDir - WorldRayDirection())), 0.0) * max(metallic * 3.0 - roughness * 1.1, 0.0);
         float3 cNorm = radiance * max(dot(norm, lightDir), 0.0) * (1.0 - roughness);
         color = cRefr * weights.x + cRefl * weights.y + cNorm * weights.z;
@@ -161,11 +194,11 @@ float3 calcIndirectLight(Reservoir reservoir, float4 diffuseAlbedo, float3 norm,
         float3 lightDir = light.Position - worldOrigin;
         float dist = length(lightDir);
         lightDir /= dist;
-        float spotFactor = pow(max(dot(-lightDir, light.Direction), 0.0), light.SpotPower);
         float lightPower = CalcAttenuation(dist, light.FalloffStart, light.FalloffEnd);
+        float spotFactor = pow(max(dot(-lightDir, light.Direction), 0.0), light.SpotPower);
         
         float3 radiance = light.Strength * diffuseAlbedo.rgb * lightPower * spotFactor * reservoir.W;
-        float3 cRefr = radiance * pow(max(dot(refrNorm, lightDir), 0.0), 2.0) * (1.0 - diffuseAlbedo.a);
+        float3 cRefr = radiance * pow(max(dot(refrNorm, lightDir), 0.0), 3.5) * (1.0 - diffuseAlbedo.a) * (nonDispersionFactor + mask * dispersionFactor);
         float3 cRefl = radiance * max(dot(norm, normalize(lightDir - WorldRayDirection())), 0.0) * max(metallic * 3.0 - roughness * 1.1, 0.0);
         float3 cNorm = radiance * max(dot(norm, lightDir), 0.0) * (1.0 - roughness);
         color = cRefr * weights.x + cRefl * weights.y + cNorm * weights.z;

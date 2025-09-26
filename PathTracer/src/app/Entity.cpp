@@ -14,7 +14,13 @@ namespace RT
 	{
 		InstanceInfo& info = instancesInfo[index];
 		XMMATRIX rot = XMMatrixRotationX(info.rot.x) * XMMatrixRotationY(info.rot.y) * XMMatrixRotationZ(info.rot.z);
-		XMStoreFloat4x4(&instances[index].world, XMMatrixScaling(info.scale.x, info.scale.y, info.scale.z) * rot * XMMatrixTranslation(info.pos.x, info.pos.y, info.pos.z));
+		XMMATRIX world = XMMatrixScaling(info.scale.x, info.scale.y, info.scale.z) * rot * XMMatrixTranslation(info.pos.x, info.pos.y, info.pos.z);
+		XMStoreFloat4x4(&instances[index].world, world);
+		if(info.scale.x != info.scale.y || info.scale.x != info.scale.z || info.scale.y != info.scale.z)
+			XMStoreFloat4x4(&instances[index].dirWorld, XMMatrixTranspose(XMMatrixInverse(nullptr, world)));
+		else
+			XMStoreFloat4x4(&instances[index].dirWorld, world);
+		instances[index].avgScale = (info.scale.x + info.scale.y + info.scale.z) / 3.0F;
 		saveWorld = true;
 	}
 

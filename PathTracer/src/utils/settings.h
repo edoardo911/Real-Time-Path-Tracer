@@ -135,6 +135,7 @@ namespace RT
 		bool aoMapping = true;
 		bool metallicMapping = true;
 		bool rayReconstruction = false;
+		bool denoising = true;
 
 		//effects
 		bool fxaa = true;
@@ -143,11 +144,11 @@ namespace RT
 
 		//color adjust
 		DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
-		float exposure = 1.0F;
+		float exposure = 1.5F;
 		float brightness = 0.0F;
 		float contrast = 1.0F;
 		float saturation = 1.0F;
-		float gamma = 1.0F;
+		float gamma = 2.2F;
 		Tonemapping tonemapping = TONEMAPPING_ACES;
 
 		//limitations

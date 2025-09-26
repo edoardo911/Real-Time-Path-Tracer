@@ -15,6 +15,7 @@ This path tracer includes:
 - ReSTIR
 - Burley BRDF (Diffuse) + GGX BRDF (Specular)
 - Tone mapping (Reinhard, Uncharted2, ACES, AGX)
+- Spectral dispersion
 
 # DLSS
 **DLSS** has been implemented following NVIDIA's guidelines
@@ -43,6 +44,9 @@ On my machine (AMD Ryzen 7 1700, NVIDIA RTX 3060, 32GB RAM), 1080p all settings 
 Result:
 ![Final Result](result.PNG)
 
+Spectral dispersion:
+![Spectral Dispersion](spectral_dispersion.png)
+
 Box scene:
 ![Box Scene](box.png)
 
@@ -51,3 +55,6 @@ Flashlight scene:
 
 Indirect scene:
 ![Indirect Scene](indirect.png)
+
+Bedroom scene:
+![Bedroom Scene](bedroom.png)

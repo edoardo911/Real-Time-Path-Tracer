@@ -62,6 +62,7 @@ namespace RT
 	{
 		DirectX::XMFLOAT4X4 world = Identity4x4();
 		DirectX::XMFLOAT4X4 prevWorld = Identity4x4();
+		DirectX::XMFLOAT4X4 dirWorld = Identity4x4();
 		DirectX::XMFLOAT4X4 texTransform = Identity4x4();
 		INT32 materialIndex = -1;
 		INT32 textureIndex = -1;
@@ -72,6 +73,7 @@ namespace RT
 		INT32 emissiveIndex = -1;
 		INT32 metallicIndex = -1;
 		INT32 isWater = 0;
+		float avgScale = 1.0F;
 	};
 
 	struct MaterialConstants
@@ -82,7 +84,7 @@ namespace RT
 		DirectX::XMFLOAT4X4 MatTransform = Identity4x4();
 		DirectX::XMFLOAT3 emission = { 0.0F, 0.0F, 0.0F };
 		float metallic = 0.0F;
-		float refractionIndex = 1.0F;
+		DirectX::XMFLOAT3 refractionIndex = { 1.0F, 1.0F, 1.0F };
 		float specular = 0.1F;
 		int castsShadows = 1;
 	};

@@ -55,7 +55,7 @@ struct Material
     float4x4 matTransform;
     float3 emission;
     float metallic;
-    float refractionIndex;
+    float3 refractionIndex;
     float specular;
     int castsShadows;
 };
@@ -64,6 +64,7 @@ struct ObjectData
 {
     float4x4 world;
     float4x4 prevWorld;
+    float4x4 dirWorld;
     float4x4 texTransform;
     int materialIndex;
     int textureIndex;
@@ -74,6 +75,7 @@ struct ObjectData
     int emissiveIndex;
     int metallicIndex;
     int isWater;
+    float avgScale;
 };
 
 //input

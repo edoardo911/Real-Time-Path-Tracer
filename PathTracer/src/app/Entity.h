@@ -55,7 +55,7 @@ namespace RT
 			geo = geometry;
 			indexCount = (UINT) geo->DrawArgs[drawArgs].IndexCount;
 			startIndexLocation = startIndex;
-			baseVertexLocation = baseVertexLocation;
+			baseVertexLocation = baseVertex;
 		}
 
 		//getters/setters

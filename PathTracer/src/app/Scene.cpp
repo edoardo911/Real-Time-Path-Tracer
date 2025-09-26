@@ -239,7 +239,10 @@ namespace RT
 			loadGeometries(device, cmdList, geometries);
 
 			for(auto& e:mEntities)
-				e->setGeo(mGeometries[e->getGeoIndex()].get());
+			{
+				if(e->getGeoIndex() >= 0)
+					e->setGeo(mGeometries[e->getGeoIndex()].get());
+			}
 		}
 
 		if(fileName != "")
@@ -791,6 +794,7 @@ namespace RT
 			std::vector<UINT16> indices;
 			std::vector<UINT32> indices32;
 			bool water = false;
+			bool singleSided = false;
 
 			std::string token = geometries[i];
 			if(token.at(0) == '#')
@@ -807,9 +811,15 @@ namespace RT
 				else if(token == "sphere")
 					meshData = geoGen.createSphere(0.5F, 50, 50);
 				else if(token == "quad")
+				{
 					meshData = geoGen.createQuad(-3.5F, 2.5F, 7.0F, 3.0F, 2.0F);
+					singleSided = true;
+				}
 				else if(token == "grid")
+				{
 					meshData = geoGen.createGrid(7.0F, 7.0F, 2, 2);
+					singleSided = true;
+				}
 				else if(token == "water_body50")
 				{
 					meshData = geoGen.createGrid(20.0F, 20.0F, 50, 50);
@@ -882,6 +892,7 @@ namespace RT
 			geom->IndexFormat = DXGI_FORMAT_R32_UINT;
 			geom->IndexBufferByteSize = ibByteSize;
 			geom->isWater = water;
+			geom->cullBackFaces = !singleSided;
 
 			SubmeshGeometry submesh;
 			submesh.IndexCount = (UINT) indices.size();

@@ -1,0 +1,5 @@
+albedo=(0.956863, 0.792157, 0.407843, 1)
+fresnelR0=(1, 0.980392, 0.764706)
+roughness=0.2
+metallic=0.6
+specular=0.7

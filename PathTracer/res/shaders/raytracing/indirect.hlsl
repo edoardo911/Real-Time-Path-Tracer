@@ -47,8 +47,8 @@ void IndirectHit(inout IndirectInfo payload, Attributes attrib)
     uvs = mul(transUvs, material.matTransform).xy;
     
     //world normalization
-    norm = normalize(mul(norm, (float3x3) objectData.world).xyz);
-    tangent = normalize(mul(tangent, (float3x3) objectData.world).xyz);
+    norm = normalize(mul(norm, (float3x3) objectData.dirWorld).xyz);
+    tangent = normalize(mul(tangent, (float3x3) objectData.dirWorld).xyz);
     
     //texturing
     float4 mapColor = float4(1, 1, 1, 1);
@@ -64,6 +64,9 @@ void IndirectHit(inout IndirectInfo payload, Attributes attrib)
     float3 emissive = float3(0.0, 0.0, 0.0);
     if(objectData.emissiveIndex >= 0)
         emissive = material.emission * sampleTextureLOD(0.0, uvs, gEmissiveMaps, objectData.emissiveIndex).r;
+    
+    if(dot(normRayDir, norm) > 0.0)
+        norm = -norm;
     
     //restir
     Reservoir reservoirs[2];
@@ -84,9 +87,9 @@ void IndirectHit(inout IndirectInfo payload, Attributes attrib)
     //diffuse albedo
     float4 diffuseAlbedo = material.diffuseAlbedo * mapColor; 
     for(int i = 0; i < min(gLightCount, 2); ++i)
-        payload.colorAndDistance.rgb += calcIndirectLight(reservoirs[i], diffuseAlbedo, norm, worldOrigin, material.roughness, material.metallic, material.refractionIndex) * 1.5;
+        payload.colorAndDistance.rgb += calcIndirectLight(reservoirs[i], diffuseAlbedo, norm, worldOrigin, material.roughness, material.metallic, material.refractionIndex, nextRand(seed)) * 1.5;
     payload.colorAndDistance.rgb += emissive * 0.6;
-    payload.colorAndDistance.rgb /= gLightCount;
+    payload.colorAndDistance.rgb /= gLightCount * 0.5;
     payload.colorAndDistance.a = RayTCurrent();
 }
 

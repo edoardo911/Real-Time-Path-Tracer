@@ -40,7 +40,7 @@ SamplerState gTrilinearWrap: register(s2);
 
 [shader("closesthit")]
 void ClosestHit(inout HitInfo payload, Attributes attrib)
-{    
+{
     ObjectData objectData = gData[InstanceID()];
     Material material = gMaterials[objectData.materialIndex];
     
@@ -62,15 +62,18 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     uint2 pos = uint2(posX, posY);
     
     float totDistanceMipmaps = RayTCurrent() + max(payload.colorAndDistance.a, 0.0);
-    float totDistance = totDistanceMipmaps / objectData.world[0][0];
+    float totDistance = totDistanceMipmaps / objectData.avgScale;
     
     //uvs transformation
     float4 transUvs = mul(float4(uvs, 0.0, 1.0), objectData.texTransform);
     uvs = mul(transUvs, material.matTransform).xy;
     
     //world normalization
-    norm = normalize(mul(norm, (float3x3) objectData.world).xyz);
-    tangent = normalize(mul(tangent, (float3x3) objectData.world).xyz);
+    norm = normalize(mul(norm, (float3x3) objectData.dirWorld).xyz);
+    tangent = normalize(mul(tangent, (float3x3) objectData.dirWorld).xyz);
+    
+    if(payload.specAndDistance.a < 0.0 && dot(normRayDir, norm) > 0.0)
+        norm = -norm;
     
     //height mapping
     if(gHeightMapping && payload.recursionDepth == 1 && objectData.heightIndex >= 0 && payload.colorAndDistance.a >= 0.0 && totDistance < HEIGHT_CLIP)
@@ -216,6 +219,8 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
         
         emissive = material.emission * sampleTextureLOD(LOD, uvs, gEmissiveMaps, objectData.emissiveIndex).r;
     }
+    else if(luma(material.emission) > 0.0)
+        emissive = material.emission;
     //metallic mapping
     float matMetallic = material.metallic;
     if(gMetallicMapping && objectData.metallicIndex >= 0 && totDistance < HEIGHT_CLIP)
@@ -294,7 +299,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
         else if(shadowDistance < NRD_FP16_MAX)
         {
             float occlusionFactor = 0.0;
-            if (occlusion > 0.5)
+            if(occlusion > 0.5)
                 occlusionFactor = occlusion * occlusion;
             else
                 occlusionFactor = occlusion * 0.43;
@@ -330,7 +335,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
         }
     }
     
-    if(totDistanceMipmaps > 5.5 * objectData.world[0][0])
+    if(totDistanceMipmaps > 5.5 * objectData.avgScale)
     {
         chance = 0.7;
         if(roughness > 0.2)
@@ -380,9 +385,6 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
         hitColor.rgb += indirectLight * diffuseAlbedo.rgb;
     hitColor.rgb += emissive;
     
-    if(payload.specAndDistance.a < 0.0 && dot(normRayDir, norm) > 0.0)
-        norm = -norm;
-    
     //reflections
     float metallic = 0.0;
     float specDist = 0.0;
@@ -415,26 +417,56 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     float visibility = 1.0 - material.diffuseAlbedo.a;
     if(payload.recursionDepth < maxBounces && material.diffuseAlbedo.a < 1.0 && nextRand(seed) < chance)
     {
-        float f = Fggx(material.fresnelR0, -normRayDir, vndfNormal);
+        float3 f = Fggx(material.fresnelR0, -normRayDir, vndfNormal);
         
         HitInfo refrPayload;
         refrPayload.colorAndDistance = float4(0, 0, 0, RayTCurrent());
         refrPayload.recursionDepth = payload.recursionDepth + 1;
         refrPayload.roughAndZ.x = roughness;
         refrPayload.candidate = reservoir;
+                
+        float ior = 1.0;
+        float3 mask = float3(0.0, 0.0, 0.0);
+        if(material.refractionIndex.x == material.refractionIndex.y && material.refractionIndex.x == material.refractionIndex.z)
+            ior = material.refractionIndex.x;
+        else
+        {
+            float w = material.refractionIndex.x + material.refractionIndex.y + material.refractionIndex.z;
+            float wr = material.refractionIndex.x / w;
+            float wg = material.refractionIndex.y / w;
+            float wb = 1.0 - wr - wg;
+            
+            float rand = nextRand(seed);
+            if(rand < wr)
+            {
+                ior = material.refractionIndex.x;
+                mask = float3(1.0 / wr, 0.0, 0.0);
+            }
+            else if(rand < wr + wg)
+            {
+                ior = material.refractionIndex.y;
+                mask = float3(0.0, 1.0 / wg, 0.0);
+            }
+            else
+            {
+                ior = material.refractionIndex.z;
+                mask = float3(0.0, 0.0, 1.0 / wb);
+            }
+        }
         
         RayDesc refrRay;
         refrRay.Origin = worldOrigin;
         if(gRefractionsRT && totDistance < REFRACTIONS_CLIP * visibility)
-            refrRay.Direction = refract(normRayDir, vndfNormal, material.refractionIndex);
+            refrRay.Direction = refract(normRayDir, vndfNormal, ior);
         else
             refrRay.Direction = normRayDir;
-        refrRay.TMin = 0.001;
+        refrRay.TMin = 0.01;
         refrRay.TMax = 50.0 * visibility;
         TraceRay(SceneBVH, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 0, 0, refrRay, refrPayload);
 
         float m = (1.0 - f) * (1.0 - metallic) * visibility;
-        specular += refrPayload.colorAndDistance.rgb * m;
+        float dispersionFactor = pow(1.0 - max(dot(-normRayDir, norm), 0.0), 1.5);
+        specular += refrPayload.colorAndDistance.rgb * (1.0 + mask * dispersionFactor) * m;
         metallic += m;
         if(matMetallic == 0.0)
             specDist = refrPayload.colorAndDistance.a;
@@ -467,7 +499,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     payload.candidate = reservoir;
     
     if(gRayReconstruction && payload.recursionDepth == 1)
-    {   
+    {
         float3 lightVec;
         if(gLights[reservoir.sampleIndex].type == LIGHT_TYPE_DIRECTIONAL)
             lightVec = -gLights[reservoir.sampleIndex].Direction;
@@ -491,7 +523,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
 
 [shader("anyhit")]
 void AnyHit(inout HitInfo payload, in Attributes attrib)
-{    
+{
     payload.specAndDistance.a = -1;
     
     ObjectData objectData = gData[InstanceID()];

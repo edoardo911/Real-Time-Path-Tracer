@@ -66,7 +66,7 @@ namespace RT
 
 		AccelerationStructureBuffers createBottomLevelAS(std::string name, const std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, UINT32>>& vVertexBuffers,
 														 const std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, UINT32>>& vIndexBuffers,
-														 bool alphaTested, bool allowUpdate, bool tessellated);
+														 bool cullBackFaces, bool allowUpdate, bool tessellated);
 		void createTopLevelAS(const std::vector<std::tuple<Microsoft::WRL::ComPtr<ID3D12Resource>, DirectX::XMMATRIX, bool, bool>>& instances);
 		void createAccelerationStructures();
 		void createRayGenSignature(ID3D12RootSignature** pRootSig);
