@@ -208,26 +208,22 @@ float3 calcIndirectLight(Reservoir reservoir, float4 diffuseAlbedo, float3 norm,
 }
 
 #ifndef NO_BLUE_NOISE
-float calcShadow(Light light, float3 worldOrigin, float3 normal, out float occlusion, uint2 pos, out float w)
+float calcShadow(Light light, float3 worldOrigin, float3 normal, out float occlusion, uint2 pos)
 {
     const float minDistance = 0.0001;
     
     float shadowDistance = NRD_FP16_MAX;
     float distanceToLight = 0;
-    w = 0;
-    
+
     if(light.type == LIGHT_TYPE_DIRECTIONAL)
     {
-        float maxDist = DIRECTIONAL_LIGHT_DISTANCE;
-        
-        float3 lightSphereDirection = calcShadowDirectionDL(worldOrigin, light.Direction, light.radius / 200.0, gBlueNoise, pos, w);
-        distanceToLight = length(lightSphereDirection);
+        float3 lightSphereDirection = calcShadowDirectionDL(-light.Direction, light.radius, gBlueNoise[pos].xy);
                 
         RayDesc ray;
         ray.Origin = worldOrigin;
-        ray.Direction = lightSphereDirection / distanceToLight;
+        ray.Direction = lightSphereDirection;
         ray.TMin = minDistance;
-        ray.TMax = distanceToLight;
+        ray.TMax = 999;
         
         ShadowInfo shadowPayload;
         shadowPayload.occlusion = 1.0;
@@ -244,14 +240,12 @@ float calcShadow(Light light, float3 worldOrigin, float3 normal, out float occlu
     }
     else if(light.type == LIGHT_TYPE_POINTLIGHT)
     {
-        float maxDist = light.FalloffEnd + light.FalloffStart;
-        
-        float3 lightSphereDirection = calcShadowDirection(worldOrigin, normalize(light.Position - worldOrigin), light.Position, light.radius, gBlueNoise, pos, w);
-        distanceToLight = length(lightSphereDirection);
+        float3 dir = calcShadowDirectionPL(worldOrigin, light.Position, light.radius, gBlueNoise[pos].xy);
+        distanceToLight = length(dir);
         
         RayDesc ray;
         ray.Origin = worldOrigin;
-        ray.Direction = lightSphereDirection / distanceToLight;
+        ray.Direction = dir / distanceToLight;
         ray.TMin = minDistance;
         ray.TMax = distanceToLight;
         
@@ -264,22 +258,20 @@ float calcShadow(Light light, float3 worldOrigin, float3 normal, out float occlu
             if(shadowPayload.distance >= 0.0)
             {
                 shadowDistance = shadowPayload.distance;
-                occlusion = shadowPayload.occlusion;
+                occlusion = shadowPayload.occlusion * 0.5;
             }
         }
     }
     else if(light.type == LIGHT_TYPE_SPOTLIGHT)
     {
-        float maxDist = light.FalloffEnd + light.FalloffStart;
-        
-        float3 lightSphereDirection = calcShadowDirection(worldOrigin, light.Direction, light.Position, light.radius, gBlueNoise, pos, w);
-        distanceToLight = length(lightSphereDirection);
+        float3 dir = calcShadowDirectionSL(worldOrigin, light.Position, light.Direction, light.radius, gBlueNoise[pos].xy);
+        distanceToLight = length(dir);
         
         RayDesc ray;
         ray.Origin = worldOrigin;
-        ray.Direction = lightSphereDirection / distanceToLight;
+        ray.Direction = dir / distanceToLight;
         ray.TMin = minDistance;
-        ray.TMax = distanceToLight;
+        ray.TMax = distanceToLight - light.radius;
         
         ShadowInfo shadowPayload;
         shadowPayload.occlusion = 1.0;
@@ -290,7 +282,7 @@ float calcShadow(Light light, float3 worldOrigin, float3 normal, out float occlu
             if(shadowPayload.distance >= 0.0)
             {
                 shadowDistance = shadowPayload.distance;
-                occlusion = shadowPayload.occlusion;
+                occlusion = shadowPayload.occlusion * 0.5;
             }
         }
     }

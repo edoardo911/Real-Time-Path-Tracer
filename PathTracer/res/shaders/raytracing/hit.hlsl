@@ -255,7 +255,6 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
         }
     }
     
-    Reservoir shadowReservoir = reservoir;
     if(gLightCount > 1)
         reservoir = mergeReservoir(reservoir, payload.candidate, worldOrigin, norm, material.fresnelR0, roughness, -normRayDir, seed);
     float sampleWeight = reservoir.W;
@@ -272,9 +271,8 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     float chance = 1.0;
     if(gShadowsRT && payload.recursionDepth < maxBounces && material.castsShadows && totDistance < SHADOWS_CLIP && gLightCount > 0)
     {
-        float w = 0.0;
         float occlusion = 1.0;
-        float shadowDistance = calcShadow(gLights[shadowReservoir.sampleIndex], worldOrigin, norm, occlusion, pos, w);
+        float shadowDistance = calcShadow(gLights[reservoir.sampleIndex], worldOrigin, norm, occlusion, pos);
             
         if(payload.recursionDepth == 1)
         {
@@ -285,13 +283,8 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
                 
             if(!gRayReconstruction)
             {
-                float lightRadius = gLights[shadowReservoir.sampleIndex].radius;
-                if(gLights[shadowReservoir.sampleIndex].type == LIGHT_TYPE_DIRECTIONAL)
-                    lightRadius /= 200.0;
-                
-                float factor = shadowReservoir.W;
-                float penumbraRadius = SIGMA_FrontEnd_PackPenumbra(shadowDistance, tan(lightRadius * 0.5));
-                payload.shadow = float4(occlusion.rrr, penumbraRadius * w * factor);
+                float penumbraRadius = SIGMA_FrontEnd_PackPenumbra(shadowDistance, gLights[reservoir.sampleIndex].radius);
+                payload.shadow = float4(occlusion.rrr, penumbraRadius);
             }
             else
                 payload.shadow.a = 1.0 - occlusion;

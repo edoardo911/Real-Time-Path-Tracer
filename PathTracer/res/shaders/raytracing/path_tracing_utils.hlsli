@@ -118,32 +118,44 @@ float3 VNDF(float3 rayDir, float3 normal, float roughness, float2 u)
     return normalize(T * m.x + B * m.y + normal * m.z);
 }
 
-float3 calcShadowDirectionDL(float3 worldOrigin, float3 lightDir, float lightRadius, Texture2D blueNoise, uint2 pos, out float w)
+//disk sampling
+float3 calcShadowDirectionDL(float3 lightDir, float lightRadius, float2 xi)
 {
-    float3 lFront = cross(lightDir, wRight);
-    lFront = normalize(lFront - dot(lFront, lightDir) * lightDir);
-    float3 lRight = cross(lightDir, lFront);
+    float r = lightRadius * sqrt(xi.x);
+    float theta = 2.0 * PI * xi.y;
     
-    float3 lightPos = -lightDir * DIRECTIONAL_LIGHT_DISTANCE;
+    float2 disk = r * float2(cos(theta), sin(theta));
     
-    float2 offset = float2(blueNoise[pos].xy) * 2.0F - 1.0F;
-    float3 offsetPos = lightPos + (lRight * offset.x * lightRadius) + (lFront * offset.y * lightRadius);
-    
-    w = length(offsetPos);
-    
-    return offsetPos - worldOrigin;
+    float3 up = abs(lightDir.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
+    float3 tangent = normalize(cross(up, lightDir));
+    float3 bitangent = cross(lightDir, tangent);
+    return normalize(lightDir + disk.x * tangent + disk.y * bitangent);
 }
 
-float3 calcShadowDirection(float3 worldOrigin, float3 lightDir, float3 lightPos, float lightRadius, Texture2D blueNoise, uint2 pos, out float w)
+//sphere sampling
+float3 calcShadowDirectionPL(float3 worldOrigin, float3 lightPos, float lightRadius, float2 xi)
 {
-    float3 lFront = cross(lightDir, wRight);
-    lFront = normalize(lFront - dot(lFront, lightDir) * lightDir);
-    float3 lRight = cross(lightDir, lFront);
+    float z = 1.0 - 2.0 * xi.x;
+    float r = sqrt(max(0.0, 1.0 - z * z));
+    float phi = 2.0 * PI * xi.y;
+    
+    float3 targetPos = lightPos + float3(r * cos(phi), r * sin(phi), z) * lightRadius;
+    return targetPos - worldOrigin;
+}
 
-    float2 offset = float2(blueNoise[pos].xy) * 2.0F - 1.0F;
-    float3 offsetPos = lightPos + (lRight * offset.x * lightRadius) + (lFront * offset.y * lightRadius);
+//hemisphere sampling
+float3 calcShadowDirectionSL(float3 worldOrigin, float3 lightPos, float3 lightDir, float lightRadius, float2 xi)
+{
+    float z = 1.0 - xi.x;
+    float r = sqrt(max(0.0, 1.0 - z * z));
+    float phi = 2.0 * PI * xi.y;
     
-    w = length(offsetPos);
+    float3 localPos = float3(r * cos(phi), r * sin(phi), z) * lightRadius;
     
-    return offsetPos - worldOrigin;
+    float3 up = abs(lightDir.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
+    float3 tangent = normalize(cross(up, lightDir));
+    float3 bitangent = cross(lightDir, tangent);
+    
+    float3 targetPos = lightPos + tangent * localPos.x + bitangent * localPos.y + lightDir * localPos.z;
+    return targetPos - worldOrigin;
 }
