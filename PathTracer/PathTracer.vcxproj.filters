@@ -254,4 +254,9 @@
       <Filter>res\shaders\postprocessing</Filter>
     </FxCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="res\shaders\common.hlsli" />
+    <None Include="res\shaders\pbr.hlsli" />
+    <None Include="res\shaders\utils.hlsli" />
+  </ItemGroup>
 </Project>

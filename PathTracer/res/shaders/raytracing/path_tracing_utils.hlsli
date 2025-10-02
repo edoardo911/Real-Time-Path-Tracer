@@ -26,17 +26,9 @@ float nextRand(inout uint s)
     return float(s & 0x00FFFFFF) / float(0x01000000);
 }
 
-//constants
-const static float3 wRight = float3(1.0F, 0.0F, 0.0F);
-
-float3 bendNormal(float3 normal, float lightRadius, Texture2D blueNoise, uint2 pos)
+float3 randomDirectionCube(uint seed)
 {
-    float3 lFront = cross(normal, wRight);
-    lFront = normalize(lFront - dot(lFront, normal) * normal);
-    float3 lRight = cross(normal, lFront);
-    
-    float2 offset = blueNoise[pos].xy * 2.0F - 1.0F;
-    return normalize(normal + (lRight * offset.x * lightRadius) + (lFront * offset.y * lightRadius));
+    return normalize(float3(nextRand(seed), nextRand(seed), nextRand(seed)) * 2.0F - 1.0F);
 }
 
 float3 cosWeight(Texture2D blueNoise, uint2 pos, float3 normal, float power)
@@ -56,11 +48,6 @@ float3 cosWeight(Texture2D blueNoise, uint2 pos, float3 normal, float power)
     float3 bitangent = cross(normal, tangent);
 
     return normalize(x * tangent + y * bitangent + z * normal);
-}
-
-float3 calcRTAODirection(uint seed)
-{
-    return normalize(float3(nextRand(seed), nextRand(seed), nextRand(seed)) * 2.0F - 1.0F);
 }
 
 float3 VNDF(float3 rayDir, float3 normal, float roughness, Texture2D blueNoise, uint2 pos)

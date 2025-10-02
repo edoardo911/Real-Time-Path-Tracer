@@ -158,7 +158,7 @@ namespace RT
 
 		//info
 		std::wstring title = L"DXR Path Tracer";
-		std::wstring version = L"dev2.0.0";
+		std::wstring version = L"dev2.1.0";
 		UINT64 ramBytes = 0;
 		std::wstring cpuInfo = L"";
 		std::wstring gpuInfo = L"";
