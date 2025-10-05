@@ -242,7 +242,27 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     }
     
     float p = payload.recursionDepth == 1 ? roughness : payload.roughAndZ.x;
-    int maxBounces = p > 0.3 ? 2 : 3;
+    uint maxBounces;
+    uint secondaryRPP;
+    uint giRPP;
+    switch(gPathTracing)
+    {
+    case 0: //low, max 3 bounces, max 5rpp
+        maxBounces = p > 0.3 ? 2 : 3;
+        secondaryRPP = 1;
+        giRPP = 1;
+        break;
+    case 1: //medium, max 3 bounces, max 8rpp
+        maxBounces = p > 0.3 ? 2 : 3;
+        secondaryRPP = p > 0.3 ? 1 : 2;
+        giRPP = 2;
+        break;
+    case 2: //high, max 4 bounces, max 11rpp
+        maxBounces = p > 0.3 ? 2 : (p > 0.15 ? 3 : 4);
+        secondaryRPP = p > 0.3 ? 1 : (p > 0.15 ? 2 : 3);
+        giRPP = 3;
+        break;
+    }
     
     //restir
     Reservoir reservoir = (Reservoir) 0.0;
@@ -303,29 +323,41 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     
     //indirect + rtao
     float3 indirectLight = float3(0, 0, 0);
-    bool occluded = false;
+    float rtao = 0.0;
     if((gIndirect || gRTAO) && objectData.emissiveIndex < 0 && payload.recursionDepth == 1 && totDistance < INDIRECT_CLIP && nextRand(seed) < chance)
     {
+        float3 gi = float3(0, 0, 0);
+        
         IndirectInfo indirectPayload;
         indirectPayload.colorAndDistance = float4(0, 0, 0, RayTCurrent());
-        
-        float3 rv = cosWeight(gBlueNoise, pos, norm, 1.0);
-        
+                
         RayDesc indirectRay;
         indirectRay.Origin = worldOrigin;
-        indirectRay.Direction = normalize(rv);
         indirectRay.TMin = 0.01;
         indirectRay.TMax = 8.5;
-        TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 2, 0, 2, indirectRay, indirectPayload);
-        indirectLight = indirectPayload.colorAndDistance.rgb * gLightCount * saturate(1.0 - indirectPayload.colorAndDistance.a / 5.5);
-        if(gRayReconstruction)
-            indirectLight *= 0.65;
-        if(gRTAO && indirectPayload.colorAndDistance.a < 0.3)
+        
+        [unroll]
+        for(int i = 0; i < giRPP; ++i)
         {
+            uint2 posOffset = (pos + uint2(i * gFrameIndex * 67, i * gFrameIndex * 97)) % 128;
+            indirectPayload.colorAndDistance = float4(0, 0, 0, RayTCurrent());
+            indirectRay.Direction = cosWeight(gBlueNoise, posOffset, norm, 1.0);
+            
+            TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 2, 0, 2, indirectRay, indirectPayload);
+            
+            gi += indirectPayload.colorAndDistance.rgb * gLightCount * saturate(1.0 - indirectPayload.colorAndDistance.a / indirectRay.TMax);
             if(gRayReconstruction)
-                occluded = true;
-            hitColor.a = indirectPayload.colorAndDistance.a;
+                indirectLight *= 0.65;
+            if(gRTAO && indirectPayload.colorAndDistance.a < 0.3)
+            {
+                if(gRayReconstruction)
+                    rtao += 1.0 / giRPP;
+                if(i == 0)
+                    hitColor.a = indirectPayload.colorAndDistance.a;
+            }
         }
+        
+        indirectLight = gi / giRPP;
     }
     
     if(totDistanceMipmaps > 5.5 * objectData.avgScale)
@@ -343,7 +375,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     
     //ambient
     float4 ambient = gAmbientLight * diffuseAlbedo;
-    hitColor.rgb = ambient.rgb * !occluded;
+    hitColor.rgb = ambient.rgb * (1.0 - rtao);
     
     //diffuse
     const float shininess = 1.0 - roughness;
@@ -384,85 +416,118 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     if(gReflectionsRT && payload.recursionDepth < maxBounces && matMetallic > 0.0 && totDistance < REFLECTIONS_CLIP * matMetallic && nextRand(seed) < chance)
     {
         HitInfo reflPayload;
-        reflPayload.colorAndDistance = float4(0, 0, 0, RayTCurrent());
-        reflPayload.recursionDepth = payload.recursionDepth + 1;
-        reflPayload.roughAndZ.x = roughness;
-        reflPayload.candidate = reservoir;
         
         RayDesc reflRay;
         reflRay.Origin = worldOrigin;
-        reflRay.Direction = reflect(normRayDir, vndfNormal);
         reflRay.TMin = 0.01;
         reflRay.TMax = 50.0 * shininess;
         
-        if(dot(reflRay.Direction, norm) > 0.0)
+        float3 reflectionColor = float3(0, 0, 0);
+        for(int i = 0; i < secondaryRPP; ++i)
         {
-            TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, reflRay, reflPayload);
+            uint2 posOffset = (pos + uint2(i * gFrameIndex * 37, i * gFrameIndex * 59)) % 128;
             
-            float3 ggx = reflectionsGGX_PDF(-normRayDir, reflRay.Direction, norm, vndfNormal, roughness, material.fresnelR0);
-            specular += reflPayload.colorAndDistance.rgb * ggx * matMetallic;
-            specDist = reflPayload.colorAndDistance.a;
-            metallic = luma(ggx) * matMetallic;
+            float3 dir;
+            if(i == 0)
+                dir = vndfNormal;
+            else
+                dir = VNDF(-normRayDir, norm, roughness, gBlueNoise, posOffset);
+            
+            reflPayload.colorAndDistance = float4(0, 0, 0, RayTCurrent());
+            reflPayload.recursionDepth = payload.recursionDepth + 1;
+            reflPayload.roughAndZ.x = roughness;
+            reflPayload.candidate = reservoir;
+            
+            reflRay.Direction = reflect(normRayDir, dir);
+            
+            if(dot(reflRay.Direction, norm) > 0.0)
+            {
+                TraceRay(SceneBVH, RAY_FLAG_NONE, 0xFF, 0, 0, 0, reflRay, reflPayload);
+            
+                float3 ggx = reflectionsGGX_PDF(-normRayDir, reflRay.Direction, norm, vndfNormal, roughness, material.fresnelR0);
+                reflectionColor += reflPayload.colorAndDistance.rgb * ggx * matMetallic;
+                specDist = reflPayload.colorAndDistance.a;
+                metallic = luma(ggx) * matMetallic / secondaryRPP;
+            }
         }
+        
+        specular += reflectionColor / secondaryRPP;
     }
     
     //refractions
     float visibility = 1.0 - material.diffuseAlbedo.a;
     if(payload.recursionDepth < maxBounces && material.diffuseAlbedo.a < 1.0 && nextRand(seed) < chance)
     {
-        float3 f = Fggx(material.fresnelR0, -normRayDir, vndfNormal);
-        
         HitInfo refrPayload;
-        refrPayload.colorAndDistance = float4(0, 0, 0, RayTCurrent());
-        refrPayload.recursionDepth = payload.recursionDepth + 1;
-        refrPayload.roughAndZ.x = roughness;
-        refrPayload.candidate = reservoir;
-                
-        float ior = 1.0;
-        float3 mask = float3(0.0, 0.0, 0.0);
-        if(material.refractionIndex.x == material.refractionIndex.y && material.refractionIndex.x == material.refractionIndex.z)
-            ior = material.refractionIndex.x;
-        else
-        {
-            float w = material.refractionIndex.x + material.refractionIndex.y + material.refractionIndex.z;
-            float wr = material.refractionIndex.x / w;
-            float wg = material.refractionIndex.y / w;
-            float wb = 1.0 - wr - wg;
-            
-            float rand = nextRand(seed);
-            if(rand < wr)
-            {
-                ior = material.refractionIndex.x;
-                mask = float3(1.0 / wr, 0.0, 0.0);
-            }
-            else if(rand < wr + wg)
-            {
-                ior = material.refractionIndex.y;
-                mask = float3(0.0, 1.0 / wg, 0.0);
-            }
-            else
-            {
-                ior = material.refractionIndex.z;
-                mask = float3(0.0, 0.0, 1.0 / wb);
-            }
-        }
         
         RayDesc refrRay;
         refrRay.Origin = worldOrigin;
-        if(gRefractionsRT && totDistance < REFRACTIONS_CLIP * visibility)
-            refrRay.Direction = refract(normRayDir, vndfNormal, ior);
-        else
-            refrRay.Direction = normRayDir;
         refrRay.TMin = 0.01;
         refrRay.TMax = 50.0 * visibility;
-        TraceRay(SceneBVH, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 0, 0, refrRay, refrPayload);
-
-        float m = (1.0 - f) * (1.0 - metallic) * visibility;
-        float dispersionFactor = pow(1.0 - max(dot(-normRayDir, norm), 0.0), 1.5);
-        specular += refrPayload.colorAndDistance.rgb * (1.0 + mask * dispersionFactor) * m;
-        metallic += m;
-        if(matMetallic == 0.0)
-            specDist = refrPayload.colorAndDistance.a;
+        
+        float3 refractionColor = float3(0, 0, 0);
+        for(int i = 0; i < secondaryRPP; ++i)
+        {
+            uint2 posOffset = (pos + uint2(i * gFrameIndex * 47, i * gFrameIndex * 61)) % 128;
+            
+            float3 dir;
+            if(i == 0)
+                dir = vndfNormal;
+            else
+                dir = VNDF(-normRayDir, norm, roughness, gBlueNoise, posOffset);
+            
+            float3 f = Fggx(material.fresnelR0, -normRayDir, vndfNormal);
+            
+            refrPayload.colorAndDistance = float4(0, 0, 0, RayTCurrent());
+            refrPayload.recursionDepth = payload.recursionDepth + 1;
+            refrPayload.roughAndZ.x = roughness;
+            refrPayload.candidate = reservoir;
+            
+            float ior = 1.0;
+            float3 mask = float3(0.0, 0.0, 0.0);
+            if(material.refractionIndex.x == material.refractionIndex.y && material.refractionIndex.x == material.refractionIndex.z)
+                ior = material.refractionIndex.x;
+            else
+            {
+                float w = material.refractionIndex.x + material.refractionIndex.y + material.refractionIndex.z;
+                float wr = material.refractionIndex.x / w;
+                float wg = material.refractionIndex.y / w;
+                float wb = 1.0 - wr - wg;
+            
+                float rand = nextRand(seed);
+                if(rand < wr)
+                {
+                    ior = material.refractionIndex.x;
+                    mask = float3(1.0 / wr, 0.0, 0.0);
+                }
+                else if(rand < wr + wg)
+                {
+                    ior = material.refractionIndex.y;
+                    mask = float3(0.0, 1.0 / wg, 0.0);
+                }
+                else
+                {
+                    ior = material.refractionIndex.z;
+                    mask = float3(0.0, 0.0, 1.0 / wb);
+                }
+            }
+            
+            if(gRefractionsRT && totDistance < REFRACTIONS_CLIP * visibility)
+                refrRay.Direction = refract(normRayDir, vndfNormal, ior);
+            else
+                refrRay.Direction = normRayDir;
+            
+            TraceRay(SceneBVH, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 0, 0, refrRay, refrPayload);
+            
+            float m = (1.0 - f) * (1.0 - metallic) * visibility;
+            float dispersionFactor = pow(1.0 - max(dot(-normRayDir, norm), 0.0), 1.5);
+            refractionColor += refrPayload.colorAndDistance.rgb * (1.0 + mask * dispersionFactor) * m;
+            metallic += m / secondaryRPP;
+            if(matMetallic == 0.0)
+                specDist = refrPayload.colorAndDistance.a;
+        }
+        
+        specular += refractionColor / secondaryRPP;
     }
     
     hitColor.rgb *= max(1.0 - metallic, 0.0);

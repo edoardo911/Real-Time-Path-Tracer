@@ -98,6 +98,13 @@ namespace RT
 		JOYSTICK_START
 	};
 
+	enum PathTracing
+	{
+		PATH_TRACING_LOW = 0,
+		PATH_TRACING_MEDIUM,
+		PATH_TRACING_HIGH
+	};
+
 	struct settings_struct
 	{
 		friend class Window;
@@ -113,6 +120,7 @@ namespace RT
 		TexResolution texResolution = TEX_RESOLUTION_2048_X_2048;
 		UINT8 anisotropic = 16;
 		DLSSMode dlss = DLSS_OFF;
+		PathTracing	pathTracing = PATH_TRACING_LOW;
 
 		//sensitivity
 		float mouseSensitivity = 5.0F;
@@ -158,7 +166,7 @@ namespace RT
 
 		//info
 		std::wstring title = L"DXR Path Tracer";
-		std::wstring version = L"dev2.1.0";
+		std::wstring version = L"dev2.1.1";
 		UINT64 ramBytes = 0;
 		std::wstring cpuInfo = L"";
 		std::wstring gpuInfo = L"";

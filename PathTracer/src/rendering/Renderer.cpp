@@ -322,7 +322,6 @@ namespace RT
 		cmdList->IASetIndexBuffer(&ib);
 		cmdList->IASetPrimitiveTopology(mSky->getPrimitiveTopology());
 
-		cmdList->SetGraphicsRootShaderResourceView(3, mSky->getGeo()->VertexBufferGPU->GetGPUVirtualAddress());
 		cmdList->SetGraphicsRootShaderResourceView(2, mCurrFrameResource->skyCB->resource()->GetGPUVirtualAddress());
 		cmdList->DrawIndexedInstanced(mSky->getIndexCount(), 1, mSky->getStartIndex(), mSky->getBaseVertex(), 0);
 	}

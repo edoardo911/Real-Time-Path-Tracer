@@ -640,7 +640,7 @@ namespace RT
 
 		pipeline.SetMaxPayloadSize(16 * sizeof(float) + 7 * sizeof(UINT));
 		pipeline.SetMaxAttributeSize(2 * sizeof(float));
-		pipeline.SetMaxRecursionDepth(4);
+		pipeline.SetMaxRecursionDepth(settings->pathTracing < PATH_TRACING_HIGH ? 4 : 5);
 
 		pipeline.Generate(&mRtStateObject);
 		ThrowIfFailed(mRtStateObject->QueryInterface(IID_PPV_ARGS(&mRtStateObjectProps)));
@@ -1363,6 +1363,7 @@ namespace RT
 		mMainPassCB.jitter = jitter;
 
 		mMainPassCB.mipmaps = settings->mipmaps;
+		mMainPassCB.pathTracing = settings->pathTracing;
 
 		mMainPassCB.rtao = settings->rtao;
 		mMainPassCB.reflectionsRT = settings->rtReflections;
