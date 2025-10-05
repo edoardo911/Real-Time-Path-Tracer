@@ -135,6 +135,8 @@ cbuffer cbPass: register(b0)
     uint gMipmaps;
     int gShadowsRT;
     int gMetallicMapping;
+    uint gPathTracing;
+    float3 pad;
     float2 jitter;
     float gFov;
     float gAspectRatio;

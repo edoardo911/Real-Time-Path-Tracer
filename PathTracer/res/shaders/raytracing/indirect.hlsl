@@ -87,9 +87,8 @@ void IndirectHit(inout IndirectInfo payload, Attributes attrib)
     //diffuse albedo
     float4 diffuseAlbedo = material.diffuseAlbedo * mapColor; 
     for(int i = 0; i < min(gLightCount, 2); ++i)
-        payload.colorAndDistance.rgb += calcIndirectLight(reservoirs[i], diffuseAlbedo, norm, worldOrigin, material.roughness, material.metallic, material.refractionIndex, nextRand(seed)) * 1.5;
+        payload.colorAndDistance.rgb += calcIndirectLight(reservoirs[i], diffuseAlbedo, norm, worldOrigin, material.roughness, material.metallic, material.refractionIndex, nextRand(seed)) * 3.0;
     payload.colorAndDistance.rgb += emissive * 0.6;
-    payload.colorAndDistance.rgb /= gLightCount * 0.5;
     payload.colorAndDistance.a = RayTCurrent();
 }
 

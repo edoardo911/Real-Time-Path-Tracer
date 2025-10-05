@@ -40,6 +40,19 @@ To run this project you need a GPU that supports ray tracing:
 - NVIDIA: models RTX 20xx, RTX 30xx, RTX 40xx and RTX 50xx
 - AMD: models RX 6000, RX 7000, RX 9000
 
+# RPP
+
+This path tracer uses from 5rpp (ray per pixel) to 11rpp based on the path tracing mode
+
+- <b>Low</b>: max 3 bounces and max 5rpp
+- <b>Medium</b>: max 3 bounces and max 8rpp
+- <b>High</b>: max 4 bounces and max 11rpp
+
+The low configuration was the default before introducing configurations and still delivers high quality graphics.
+Higher settings are experimental and thought for high tier GPUs.
+
+![Quality](quality.png)
+
 # DLSS
 **DLSS** has been implemented following NVIDIA's guidelines
 https://github.com/NVIDIA/DLSS/blob/main/doc/DLSS_Programming_Guide_Release.pdf

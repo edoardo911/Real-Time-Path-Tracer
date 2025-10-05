@@ -52,6 +52,8 @@ namespace RT
 		UINT mipmaps = 0;
 		int shadowsRT = 0;
 		int metallicMapping = 0;
+		UINT pathTracing = 0;
+		DirectX::XMFLOAT3 pad;
 		DirectX::XMFLOAT2 jitter = { 0, 0 };
 		float fov = 0.0F;
 		float aspectRatio = 1.0F;

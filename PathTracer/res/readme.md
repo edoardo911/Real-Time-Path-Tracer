@@ -99,6 +99,7 @@ From the <code>main.cpp</code> file you can set custom settings for the renderer
 - <code>texResolution</code>: using a lower resolution will force the renderer to load and render lower resolution textures (to use for performances reasons)
 - <code>anisotropic</code>: will enhance the visual rendering of textures rendered from grazing angles, must be between 0 and 16
 - <code>dlss</code>: choose your DLSS mode between off, performance, quality, balanced, ultra performance, ultra quality (not working) and DLAA
+- <code>pathTracing</code>: either of <code>PATH_TRACING_LOW</code>, <code>PATH_TRACING_MEDIUM</code> or <code>PATH_TRACING_HIGH</code>
 - <code>mouseSensitivity</code>: sensitivity of the mouse
 - <code>vSync</code>: enables vSync to fix screen tearing
 - <code>fullscreen</code>: fullscreen mode
