@@ -531,6 +531,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     }
     
     hitColor.rgb *= max(1.0 - metallic, 0.0);
+	hitColor.rgb = max(hitColor.rgb, ambient.rgb);
     if(payload.recursionDepth > 1)
     {
         hitColor.rgb += specular;

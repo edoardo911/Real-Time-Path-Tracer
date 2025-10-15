@@ -75,13 +75,14 @@ float3 GGX_PDF(MaterialPBR mat, float3 halfVec, float3 normal, float3 toEye)
         float NdotH = dot(normal, halfVec);
         float VdotH = dot(toEye, halfVec);
 
-        if(NdotL <= 0.0 || NdotH <= 0.0 || VdotH <= 0.0)
+        if(NdotL <= 0.0 || NdotH <= 0.0 || NdotV <= 0.0)
             return 0.0;
         
         float G = Gggx(mat.roughness, normal, toEye, lightVec);
+        float G1 = G1ggx(toEye, halfVec, mat.roughness);
         float3 F = Fggx(mat.R0, toEye, halfVec);
         
-        return (G * F * VdotH) / (NdotV * NdotL * NdotH);
+        return (G * F * VdotH) / (G1 * NdotV * NdotL * NdotH);
     }
     return 0.0;
 }
@@ -99,9 +100,6 @@ float3 reflectionsGGX(float3 toEye, float3 reflectionDir, float3 normal, float r
 
 float3 reflectionsGGX_PDF(float3 toEye, float3 reflectionDir, float3 normal, float3 halfVec, float roughness, float3 R0)
 {
-    float G = Gggx(roughness, normal, toEye, reflectionDir);
-    float3 F = Fggx(R0, reflectionDir, halfVec);
-    
     float NdotL = dot(normal, reflectionDir);
     float NdotV = dot(normal, toEye);
     float NdotH = dot(normal, halfVec);
@@ -109,7 +107,12 @@ float3 reflectionsGGX_PDF(float3 toEye, float3 reflectionDir, float3 normal, flo
 
     if(NdotL <= 0.0 || NdotH <= 0.0 || VdotH <= 0.0)
         return 0.0;
-    return (G * F * VdotH) / (NdotV * NdotL * NdotH);
+    
+    float G = Gggx(roughness, normal, toEye, reflectionDir);
+    float G1 = G1ggx(toEye, halfVec, roughness);
+    float3 F = Fggx(R0, reflectionDir, halfVec);
+    
+    return (G * F * VdotH) / (G1 * NdotV * NdotL * NdotH);
 }
 
 float3 ComputeDirectionalLight(Light L, MaterialPBR mat, float3 vndfNormal, float3 cosWNormal, float3 normal, float3 toEye, out float3 Ls)
